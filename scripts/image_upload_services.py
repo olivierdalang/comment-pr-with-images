@@ -1,10 +1,8 @@
 import base64
 import subprocess
 import time
-from functools import cached_property
 
-import requests
-
+from classes import Req
 from helpers import print_message
 
 
@@ -69,25 +67,19 @@ class ImgurImageUploadService(ImageUploadServiceBase):
 
     IMGUR_API_URL = "https://api.imgur.com/3/upload"
 
-    def _upload_single_image(self, filename, image_data):
+    def _upload_single_image(self, file_name, image_data):
         """Upload a Single Image to Imgur using Imgur API"""
-        response = requests.post(
-            self.IMGUR_API_URL,
-            files={
-                "image": image_data,
-            },
-            data={"name": filename},
-        )
+        response = Req.post(url=self.IMGUR_API_URL, data=image_data, files=file_name)
 
         data = response.json()
 
         if response.status_code == 200 and data["success"]:
             link = data["data"]["link"]
-            print_message(f'Image "{filename}" Uploaded to "{link}"')
+            print_message(f'Image "{file_name}" Uploaded to "{link}"')
             return link
         else:
             print_message(
-                f'Failed to Upload Image "{filename}". '
+                f'Failed to Upload Image "{file_name}". '
                 f"Status Code: {response.status_code}"
             )
             return None
@@ -101,14 +93,6 @@ class GitHubBranchImageUploadService(ImageUploadServiceBase):
     IMAGE_UPLOAD_DIRECTORY = "webpage-screenshots"
     AUTHOR_NAME = "github-actions[bot]"
     AUTHOR_EMAIL = "github-actions[bot]@users.noreply.github.com"
-
-    @cached_property
-    def _request_headers(self):
-        """Get headers for GitHub API request"""
-        return {
-            "Accept": "application/vnd.github.v3+json",
-            "authorization": f"Bearer {self.configuration.GITHUB_TOKEN}",
-        }
 
     def _setup_git_branch(self):
         """Set Up Git Branch"""
@@ -154,7 +138,7 @@ class GitHubBranchImageUploadService(ImageUploadServiceBase):
             "committer": {"name": self.AUTHOR_NAME, "email": self.AUTHOR_EMAIL},
         }
 
-        response = requests.put(url, headers=self._request_headers, json=data)
+        response = Req.post(url=url, data=data)
 
         if response.status_code in [200, 201]:
             link = self._get_github_image_url(filename)

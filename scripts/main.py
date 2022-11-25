@@ -1,16 +1,10 @@
 import glob
-import os
-import sys
 import time
-from functools import cached_property
 
-import requests
-from config import Configuration
+from classes import Config, Req
 from helpers import print_message
-from image_upload_services import (
-    GitHubBranchImageUploadService,
-    ImgurImageUploadService,
-)
+from image_upload_services import (GitHubBranchImageUploadService,
+                                   ImgurImageUploadService)
 
 
 class WebpageScreenshotAction:
@@ -23,14 +17,6 @@ class WebpageScreenshotAction:
 
     def __init__(self, configuration):
         self.configuration = configuration
-
-    @cached_property
-    def _request_headers(self):
-        """Get headers for GitHub API request"""
-        return {
-            "Accept": "application/vnd.github.v3+json",
-            "authorization": f"Bearer {self.configuration.GITHUB_TOKEN}",
-        }
 
     def _comment_screenshots(self, images):
         """Comments Screenshots to the pull request"""
@@ -55,9 +41,7 @@ class WebpageScreenshotAction:
             f"issues/{self.configuration.GITHUB_PULL_REQUEST_NUMBER}/comments"
         )
 
-        response = requests.post(
-            comment_url, headers=self._request_headers, json={"body": string_data}
-        )
+        response = Req.post(url=comment_url, data=string_data)
 
         if response.status_code != 201:
             # API should return 201, otherwise show error message
@@ -106,9 +90,7 @@ class WebpageScreenshotAction:
             f"issues/{self.configuration.GITHUB_PULL_REQUEST_NUMBER}/comments"
         )
 
-        response = requests.post(
-            url_list_comments_in_issue, headers=self._request_headers
-        )
+        response = Req.get(url=url_list_comments_in_issue)
 
         if response.status_code != 200:
             print_message(
@@ -140,11 +122,7 @@ class WebpageScreenshotAction:
                 f"issues/comments/{previous_comment['id']}"
             )
 
-            response = requests.patch(
-                edit_past_comment_url,
-                headers=self._request_headers,
-                json={"body": deprecation_notice},
-            )
+            Req.patch(url=edit_past_comment_url, data=deprecation_notice)
 
     def run(self):
 
@@ -170,21 +148,9 @@ class WebpageScreenshotAction:
 
 if __name__ == "__main__":
     print_message("Parse Configuration", message_type="group")
-    environment = os.environ
-    configuration = Configuration.from_environment(environment)
+    config = Config()
     print_message("", message_type="endgroup")
-
-    # If the workflow was not triggered by a pull request
-    # Exit the script with code 1.
-    if configuration.GITHUB_EVENT_NAME not in configuration.SUPPORTED_EVENT_NAMES:
-        print_message(
-            "This action only works for "
-            f'"{configuration.SUPPORTED_EVENT_NAMES}" event(s)',
-            message_type="error",
-        )
-        sys.exit(1)
-
     # Initialize the Webpage Screenshot Action
-    action = WebpageScreenshotAction(configuration)
+    action = WebpageScreenshotAction(config)
     # Run Action
     action.run()
