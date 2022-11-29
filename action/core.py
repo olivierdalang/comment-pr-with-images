@@ -11,7 +11,7 @@ class Validator(ABC):
     def __set_name__(self, _, name):
         self.private_name = "_" + name
 
-    def __get__(self, obj, **kwargs):
+    def __get__(self, obj, *args, **kwargs):
         return getattr(obj, self.private_name)
 
     def __set__(self, obj, value):
@@ -44,21 +44,17 @@ class NoEmpty(Validator):
 
 
 class ProperBool(Validator):
-    def validate(self, value) -> bool:
+    def validate(self, value):
         if isinstance(value, bool):
-            return value
+            return
 
         if not isinstance(value, str):
             raise ValueError(f"{self.pretty_name} must be string or bool!")
 
-        value = value.lower()
-
-        if not value in ["true", "false"]:
+        if not value.lower() in ["true", "false"]:
             raise ValueError(
                 f"'{self.private_name[1:]}' must be either 'false' or 'true'."
             )
-
-        return value == "true"
 
 
 class ImgurConfig:
@@ -134,13 +130,13 @@ class Config:
             )
             exit(1)
 
-        upload_to = environ.get("INPUT_UPLOAD_TO", "github_branch")
-        
-        if upload_to == "imgur":
-            self.imgur_config = ImgurConfig(upload_to)
+        self.upload_to = environ.get("INPUT_UPLOAD_TO", "github_branch")
+
+        if self.upload_to == "imgur":
+            self.imgur_config = ImgurConfig(self.upload_to)
             self.gh_config = GhConfig(**gh_required)
         else:
-            gh_merged = {**gh_required, **{"upload_to_branch": upload_to}}
+            gh_merged = {**gh_required, **{"upload_to_branch": self.upload_to}}
             self.gh_config = GhConfig(**gh_merged)
 
 
@@ -149,7 +145,7 @@ class Req:
     gh_api_url = "https://api.github.com"
     headers = {
         "Accept": "application/vnd.github.v3+json",
-        "authorization": f"Bearer { environ['GITHUB_TOKEN']}",
+        "authorization": f"Bearer { environ['INPUT_GITHUB_TOKEN']}",
     }
 
     @staticmethod
@@ -161,5 +157,5 @@ class Req:
         return Req.client.post(url, headers=Req.headers, json={"body": data}, **kwargs)
 
     @staticmethod
-    def patch(url: str, data: str | dict[str, Any]) -> Response:
-        return Req.client.patch(url, headers=Req.headers, json={"body": data})
+    def patch(url: str, data: str | dict[str, Any], **kwargs) -> Response:
+        return Req.client.patch(url, headers=Req.headers, json={"body": data}, **kwargs)

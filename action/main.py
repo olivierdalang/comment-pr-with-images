@@ -1,12 +1,15 @@
 import glob
-import os
-import sys
 import time
+from functools import cached_property
+from itertools import islice
 
-from classes import Config, Req
+import requests
+from core import Config
 from helpers import print_message
-from image_upload_services import (GitHubBranchImageUploadService,
-                                   ImgurImageUploadService)
+from image_upload_services import (
+    GitHubBranchImageUploadService,
+    ImgurImageUploadService,
+)
 
 
 class WebpageScreenshotAction:
@@ -20,6 +23,14 @@ class WebpageScreenshotAction:
     def __init__(self, configuration):
         self.configuration = configuration
 
+    @cached_property
+    def _request_headers(self):
+        """Get headers for GitHub API request"""
+        return {
+            "Accept": "application/vnd.github.v3+json",
+            "authorization": f"Bearer {self.configuration.GITHUB_TOKEN}",
+        }
+
     def _comment_screenshots(self, images):
         """Comments Screenshots to the pull request"""
         run_url = (
@@ -27,8 +38,8 @@ class WebpageScreenshotAction:
             f"actions/runs/{self.configuration.GITHUB_RUN_ID}"
         )
 
-        string_data = f"## Here are the Screenshots for commit `{self.configuration.GITHUB_SHA}`. \
-            You can inspect the workflow run at {run_url}. \n\n"
+        string_data = f"{self.configuration.CUSTOM_ATTACHMENT_MSG} `{self.configuration.GITHUB_SHA}`. \
+            _You can inspect the workflow run [here]({run_url})_. \n\n"
 
         for image in sorted(images, key=lambda image: image["filename"]):
             file_path, filename, url = (
@@ -43,7 +54,9 @@ class WebpageScreenshotAction:
             f"issues/{self.configuration.GITHUB_PULL_REQUEST_NUMBER}/comments"
         )
 
-        response = Req.post(url=comment_url, data=string_data)
+        response = requests.post(
+            comment_url, headers=self._request_headers, json={"body": string_data}
+        )
 
         if response.status_code != 201:
             # API should return 201, otherwise show error message
@@ -55,10 +68,12 @@ class WebpageScreenshotAction:
             )
             print_message(msg, message_type="error")
         else:
-            data = response.json()
-            self._deprecate_previous_if_any(
-                latest_id=data["id"], latest_url=data["html_url"]
-            )
+            if self.configuration.EDIT_PREVIOUS_COMMENT:
+                comment = response.json()
+                self._deprecate_previous_if_any(
+                    latest_issue_url=comment["issue_url"],
+                    latest_comment_url=comment["html_url"],
+                )
 
     def _get_image_upload_service(self):
         """Get image upload service"""
@@ -83,16 +98,20 @@ class WebpageScreenshotAction:
             .replace(" ", "")
         )
 
-    def _deprecate_previous_if_any(self, latest_id: int, latest_url: str):
+    def _deprecate_previous_if_any(
+        self, latest_issue_url: str, latest_comment_url: str
+    ):
         """Tell the previous comment about the new one."""
-        deprecation_notice = f"__DEPRECATED__: _This screenshot is no longer up-to-date. The latest version can be found [here]({latest_url})_"
+        deprecation_notice = f"__DEPRECATED__: _This screenshot is no longer up-to-date. The latest version can be found [here]({latest_comment_url})_."
 
         url_list_comments_in_issue = (
             f"{self.GITHUB_API_URL}/repos/{self.configuration.GITHUB_REPOSITORY}/"
             f"issues/{self.configuration.GITHUB_PULL_REQUEST_NUMBER}/comments"
         )
 
-        response = Req.get(url=url_list_comments_in_issue)
+        response = requests.get(
+            url_list_comments_in_issue, headers=self._request_headers
+        )
 
         if response.status_code != 200:
             print_message(
@@ -100,31 +119,40 @@ class WebpageScreenshotAction:
             )
             return
 
-        data = response.json()
-
-        if isinstance(data, list) and len(data) > 0:
-            previous_comments = sorted(
-                data, key=lambda item: item["created_at"], reverse=True
+        elif comments := response.json():
+            # get the latest 2 comments from the bot if any
+            from_bot_same_issue_or_pr = filter(
+                lambda c: c["user"]["login"] == "github-actions[bot]"
+                and self.configuration.CUSTOM_ATTACHMENT_MSG in c["body"]
+                and c["issue_url"] == latest_issue_url,
+                comments,
             )
-            previous_comment = next(
-                filter(
-                    lambda c: c["author_association"] == "github-actions[bot]",
-                    previous_comments,
+            last_comments = list(
+                islice(
+                    sorted(
+                        from_bot_same_issue_or_pr,
+                        key=lambda c: c["created_at"],
+                        reverse=True,
+                    ),
+                    2,
                 )
             )
 
-            if previous_comment["id"] == latest_id:
+            if len(last_comments) != 2:
                 print_message(
                     "This is the latest commented batch of screenshots, you're all good!"
                 )
-                return
 
-            edit_past_comment_url = (
-                f"{self.GITHUB_API_URL}/repos/{self.configuration.GITHUB_REPOSITORY}/"
-                f"issues/comments/{previous_comment['id']}"
-            )
-
-            Req.patch(url=edit_past_comment_url, data=deprecation_notice)
+            else:
+                edit_past_comment_url = (
+                    f"{self.GITHUB_API_URL}/repos/{self.configuration.github_config.repo}/"
+                    f"issues/comments/{last_comments[1]['id']}"
+                )
+                response = requests.patch(
+                    edit_past_comment_url,
+                    headers=self._request_headers,
+                    json={"body": deprecation_notice},
+                )
 
     def run(self):
 
@@ -150,9 +178,9 @@ class WebpageScreenshotAction:
 
 if __name__ == "__main__":
     print_message("Parse Configuration", message_type="group")
-    config = Config()
+    configuration = Config()
     print_message("", message_type="endgroup")
     # Initialize the Webpage Screenshot Action
-    action = WebpageScreenshotAction(config)
+    action = WebpageScreenshotAction(configuration)
     # Run Action
     action.run()

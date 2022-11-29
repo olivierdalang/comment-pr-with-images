@@ -1,8 +1,10 @@
 import base64
 import subprocess
 import time
+from abc import abstractmethod
+from typing import Any
 
-from classes import Req
+from core import Req
 from helpers import print_message
 
 
@@ -14,6 +16,7 @@ class ImageUploadServiceBase:
         self.images_to_upload = []
         self.uploaded_images = []
 
+    @abstractmethod
     def _upload_single_image(self, filename, image_data):
         """
         Main Method to Upload a Single Images.
@@ -21,14 +24,14 @@ class ImageUploadServiceBase:
         All Child Classes May Implement The `_upload_single_image` Method
         Must return a image URL or None
         """
-        return None
+        raise NotImplementedError
 
     def add(self, file_path, filename, image_data):
         self.images_to_upload.append(
             {"file_path": file_path, "filename": filename, "data": image_data}
         )
 
-    def upload(self):
+    def upload(self) -> list[Any]:
         """
         Main Method to Upload Images.
 
@@ -67,7 +70,7 @@ class ImgurImageUploadService(ImageUploadServiceBase):
 
     IMGUR_API_URL = "https://api.imgur.com/3/upload"
 
-    def _upload_single_image(self, file_name, image_data):
+    def _upload_single_image(self, file_name, image_data) -> str | None:
         """Upload a Single Image to Imgur using Imgur API"""
         response = Req.post(url=self.IMGUR_API_URL, data=image_data, files=file_name)
 
@@ -115,22 +118,22 @@ class GitHubBranchImageUploadService(ImageUploadServiceBase):
             print_message(f'Branch "{self.BRANCH_NAME}" Already Exists')
         print_message("", message_type="endgroup")
 
-    def _get_github_image_url(self, filename):
+    def _get_github_image_url(self, filename) -> str:
         """Get GitHub Image URL"""
         return (
-            f"https://github.com/{self.configuration.GITHUB_REPOSITORY}/raw"
+            f"https://github.com/{self.configuration.gh_config.repo}/raw"
             f"/{self.BRANCH_NAME}/{self.IMAGE_UPLOAD_DIRECTORY}/{filename}"
         )
 
-    def _upload_single_image(self, filename, image_data):
+    def _upload_single_image(self, filename, image_data) -> str | None:
         url = (
-            f"{self.GITHUB_API_URL}/repos/{self.configuration.GITHUB_REPOSITORY}"
+            f"{self.GITHUB_API_URL}/repos/{self.configuration.gh_config.repo}"
             f"/contents/{self.IMAGE_UPLOAD_DIRECTORY}/{filename}"
         )
         data = {
             "message": (
                 "[webpage-screenshot-action] Added Screenshots for "
-                f"PR #{self.configuration.GITHUB_PULL_REQUEST_NUMBER}"
+                f"PR #{self.configuration.gh_config.ref}"
             ),
             "content": base64.b64encode(image_data).decode("utf-8"),
             "branch": self.BRANCH_NAME,
@@ -149,13 +152,13 @@ class GitHubBranchImageUploadService(ImageUploadServiceBase):
             msg = (
                 f'Error while trying to upload "{filename}" to github. '
                 "GitHub API returned error response for "
-                f"{self.configuration.GITHUB_REPOSITORY},"
+                f"{self.configuration.gh_config.repo},"
                 f"status code: {response.status_code}"
             )
             print_message(msg, message_type="error")
             return None
 
-    def upload(self):
+    def upload(self) -> list[Any]:
         """Upload Images to a GitHub Branch"""
         if not self.images_to_upload:
             return []

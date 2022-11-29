@@ -1,7 +1,7 @@
 import subprocess
 
 
-def print_message(message, message_type=None):
+def print_message(message, message_type=None) -> subprocess.CompletedProcess[bytes]:
     """Helper function to print colorful outputs in GitHub Actions shell"""
     # https://docs.github.com/en/actions/reference/workflow-commands-for-github-actions
     if not message_type:

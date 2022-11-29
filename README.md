@@ -8,16 +8,6 @@ It was adapted from https://github.com/saadmk11/comment-webpage-screenshot, most
 
 **Note:** This Action Only Works on Pull Requests.
 
-## Workflow inputs
-
-These are the inputs that can be provided on the workflow.
-
-| Name | Required | Description | Default |
-|------|----------|-------------|---------|
-| `upload_to` | No | Image Upload Service Name (Options are: `github_branch`, `imgur`) **[More Details](#available-image-upload-services)** | `github_branch` |
-| `images` | Yes | Comma separated lists of artifacts to upload (supports glob patterns: `tests_artifacts/**/*.gif, tests_artifacts/**/*.png`) | `null` |
-| `github_token` | No | `GITHUB_TOKEN` provided by the workflow run or Personal Access Token (PAT) | `github.token` |
-
 ## Example Workflow
 
 ```yaml
