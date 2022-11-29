@@ -66,11 +66,9 @@ class Configuration:
             "GITHUB_RUN_ID",
             "GITHUB_SHA",
             "INPUT_GITHUB_TOKEN",
-            "INPUT_UPLOAD_TO",
             "INPUT_IMAGES",
             "INPUT_CUSTOM_ATTACHMENT_MSG",
             "INPUT_EDIT_PREVIOUS_COMMENT",
-            "INPUT_GITHUB_TOKEN",
             "INPUT_UPLOAD_TO",
             "INPUT_IMAGES",
         ]

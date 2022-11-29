@@ -41,7 +41,7 @@ class WebpageScreenshotAction:
         )
 
         string_data = f"{self.configuration.CUSTOM_ATTACHMENT_MSG} `{self.configuration.GITHUB_SHA}`. \
-            _You can inspect the workflow run at {run_url}_. \n\n"
+            _You can inspect the workflow run [here]({run_url})_. \n\n"
 
         for image in sorted(images, key=lambda image: image["filename"]):
             file_path, filename, url = (
@@ -122,10 +122,10 @@ class WebpageScreenshotAction:
             return
 
         elif comments := response.json():
-            # get the latest 2 comments from a bot if any
-            # FIX ME: What if there are multiple bots posting across Issues / PRs?
+            # get the latest 2 comments from the bot if any
             from_bot_same_issue_or_pr = filter(
                 lambda c: c["user"]["login"] == "github-actions[bot]"
+                and self.configuration.CUSTOM_ATTACHMENT_MSG in c["body"]
                 and c["issue_url"] == latest_issue_url,
                 comments,
             )
