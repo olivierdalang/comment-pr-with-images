@@ -50,26 +50,8 @@ class WebpageScreenshotAction:
             )
             has_extension = filename[-4:]
 
-            if any(f in has_extension for f in ["png", "jpg", "jpeg", "gif"]):
-                gh_media_url_embedding = f"<kbd>![{filename}]({url})</kbd>"
-
-            elif ext := next(
-                filter(lambda f: f in has_extension, ["webm", "mp4"]), None
-            ):
-                gh_media_url_embedding = f"""
-                <video controls>
-                    <source src="{url}" type="video/{ext}" />
-                    <source src="{url}" type="video/{ext}" />
-                    <p>
-                        Your browser doesn't support HTML video. Here is a
-                        <a href="{url}">link to the video</a> instead.
-                    </p>
-                </video>
-                """
-            else:
-                gh_media_url_embedding = url
-
-            comment_body += f"### {file_path}\n{gh_media_url_embedding}\n"
+            comment_body += f"just testing...\n"
+            comment_body += f"https://user-images.githubusercontent.com/19554213/205923229-2bb6dc90-5209-4521-b3d1-8a18f0977baa.webm\n"
 
         comment_url = (
             f"{self.GITHUB_API_URL}/repos/{self.configuration.GITHUB_REPOSITORY}/"
