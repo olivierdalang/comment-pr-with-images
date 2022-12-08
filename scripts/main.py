@@ -51,6 +51,7 @@ class WebpageScreenshotAction:
             has_extension = filename[-4:]
 
             comment_body += f"just testing...\n"
+            comment_body += f"\n"
             comment_body += f"https://user-images.githubusercontent.com/19554213/205923229-2bb6dc90-5209-4521-b3d1-8a18f0977baa.webm\n"
 
         comment_url = (
