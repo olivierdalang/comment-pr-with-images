@@ -114,9 +114,18 @@ class GitHubBranchImageUploadService(ImageUploadServiceBase):
     def _setup_git_branch(self):
         """Set Up Git Branch"""
         print_message("Setup GitHub Branch", message_type="group")
+        subprocess.run(
+            [
+                "git",
+                "config",
+                "--global",
+                "--add",
+                "safe.directory",
+                "/github/workspace",
+            ]
+        )
         subprocess.run(["git", "config", "user.name", self.AUTHOR_NAME])
         subprocess.run(["git", "config", "user.email", self.AUTHOR_EMAIL])
-
         subprocess.run(
             ["git", "fetch", "origin", "--prune", "--unshallow"],
         )
@@ -141,9 +150,9 @@ class GitHubBranchImageUploadService(ImageUploadServiceBase):
 
     def _upload_single_image(self, filename, image_data):
         """
-        As of nov. 2022, GitHub treats file uploads with an already used filename as updates, 
+        As of nov. 2022, GitHub treats file uploads with an already used filename as updates,
         and as a result expects as request param the 'sha' of the file to update.
-        This would need to save sha-s between jobs. 
+        This would need to save sha-s between jobs.
         """
         fingerprint = str(uuid4())
         head, tail = filename[:-5], filename[-5:]
