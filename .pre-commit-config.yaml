@@ -1,13 +1,13 @@
 repos:
   # Fix end of files
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v4.4.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: mixed-line-ending
         args:
-          - '--fix=lf'
+          - "--fix=lf"
 
   # Remove unused imports/variables
   - repo: https://github.com/myint/autoflake
@@ -22,7 +22,7 @@ repos:
 
   # Sort imports
   - repo: https://github.com/pycqa/isort
-    rev: "5.7.0"
+    rev: "5.11.5"
     hooks:
       - id: isort
         args:
